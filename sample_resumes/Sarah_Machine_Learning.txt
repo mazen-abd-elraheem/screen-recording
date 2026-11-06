@@ -1,0 +1,14 @@
+Sarah Al-Mansoor
+Senior Machine Learning & Python Engineer
+
+Summary:
+Results-driven Machine Learning Engineer with 5+ years of experience building, deploying,
+and monitoring production ML models. Proficient in Python, scikit-learn, TensorFlow,
+pandas, and NumPy. Experienced in developing scalable RESTful microservices with Flask
+and FastAPI, containerization with Docker, and orchestrating pipelines on AWS.
+
+Key Skills:
+- Programming: Python, SQL, C++, Bash
+- ML/AI: scikit-learn, TensorFlow, PyTorch, pandas, NumPy, NLTK, spaCy
+- Backend: Flask, FastAPI, REST APIs, PostgreSQL
+- DevOps: Docker, Git, CI/CD, AWS

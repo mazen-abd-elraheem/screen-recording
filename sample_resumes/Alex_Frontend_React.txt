@@ -1,0 +1,13 @@
+Alex Rivera
+Lead Frontend Developer & UI Engineer
+
+Summary:
+Passionate Frontend Developer with 4 years specializing in crafting high-performance,
+accessible web applications using React, Next.js, and TypeScript. Expert in modern styling
+with Tailwind CSS, CSS Modules, and responsive design systems.
+
+Key Skills:
+- Frontend: React, Next.js, TypeScript, JavaScript (ES6+), HTML5, CSS3, Tailwind CSS
+- State Management: Redux Toolkit, Zustand, React Query
+- Testing & Build: Jest, Cypress, Vite, Webpack
+- Collaboration: Git, Figma, Agile/Scrum

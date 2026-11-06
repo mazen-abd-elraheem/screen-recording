@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Automated Resume Screening & Ranking | Enterprise ATS Platform</title>
+  <meta name="description" content="AI & NLP powered resume screening platform with interactive voice recording and calibrated candidate ranking.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css?v=3.3">
+</head>
+<body class="saas-theme">
+  <!-- Top Executive Navigation Bar -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Automated Resume Screening</h1>
+          <p class="subtitle">Universal NLP Engine • Porter Stemmer • Calibrated Scoring • Multi-Modal Voice</p>
+        </div>
+      </div>
+      <div class="header-nav-actions">
+        <button type="button" class="header-action-btn tutorial-header-btn" onclick="openVoiceTutorial()" title="Listen to Bilingual Voice Tutorial Guide">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+            <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+          </svg>
+          <span>Voice Tutorial</span>
+        </button>
+        <button type="button" class="header-action-btn chat-header-btn" onclick="toggleOllamaChat()" title="Open Ollama AI Recruiter Chat">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            <circle cx="8" cy="10" r="1"></circle>
+            <circle cx="12" cy="10" r="1"></circle>
+            <circle cx="16" cy="10" r="1"></circle>
+          </svg>
+          <span>AI Recruiter Chat</span>
+          <span class="header-chat-pulse"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <!-- Presets & Quick Action Bar -->
+    <section class="toolbar-section">
+      <div class="preset-label-wrap">
+        <svg class="toolbar-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        <span class="preset-label">Job Presets:</span>
+      </div>
+      <div class="preset-buttons" id="presetButtons">
+        <button type="button" class="preset-btn" id="presetBtnDE" onclick="loadPreset('data-engineer')">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+          </svg>
+          <span>Data Engineer (Spark/ETL)</span>
+        </button>
+        <button type="button" class="preset-btn" id="presetBtnML" onclick="loadPreset('ml-python')">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
+          </svg>
+          <span>Python & Machine Learning</span>
+        </button>
+        <button type="button" class="preset-btn" id="presetBtnReact" onclick="loadPreset('frontend-react')">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+          <span>Frontend React Developer</span>
+        </button>
+        <button type="button" class="preset-btn secondary" id="presetBtnClear" onclick="clearAll()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="1 4 1 10 7 10"></polyline>
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+          </svg>
+          <span>Clear All</span>
+        </button>
+        <button type="button" class="preset-btn tutorial-btn" id="btnVoiceTutorial" onclick="openVoiceTutorial()" title="Listen to Voice Tutorial Guide">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+            <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+          </svg>
+          <span>Voice Tutorial</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Voice Intelligence Panel -->
+    <section class="card voice-screener-card" id="voiceCard">
+      <div class="card-header voice-header">
+        <div class="card-title">
+          <div class="card-icon-badge">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+          </div>
+          <div>
+            <h2>Voice Screener & Audio Assistant</h2>
+            <p class="voice-subtitle">Interactive speech-to-text screening with automated voice evaluation playback</p>
+          </div>
+        </div>
+        <div class="voice-controls-top">
+          <button type="button" class="btn-voice-tutorial-banner" onclick="openVoiceTutorial()" title="Open Bilingual Voice Guide">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+              <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+            </svg>
+            <span>Voice Guide</span>
+          </button>
+          <div class="voice-lang-select-wrap">
+            <label for="voiceLangSelect" class="lang-label">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+              </svg>
+              <span>Language:</span>
+            </label>
+            <select id="voiceLangSelect" class="lang-select">
+              <option value="auto" selected>Auto (English / Arabic)</option>
+              <option value="en">English (US)</option>
+              <option value="ar">Arabic (العربية)</option>
+            </select>
+          </div>
+          <label class="autoplay-toggle">
+            <input type="checkbox" id="autoPlayVoiceToggle" checked>
+            <span class="toggle-slider"></span>
+            <span class="toggle-text">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              </svg>
+              Auto-Play Audio Reply
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card-body voice-body">
+        <div class="voice-interaction-bar">
+          <!-- Main Record Button -->
+          <button type="button" class="btn-voice-record" id="btnVoiceRecord" onclick="toggleVoiceRecording()">
+            <span class="mic-icon" id="voiceMicIcon">
+              <svg class="icon-record-mic" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </span>
+            <span class="record-text" id="voiceRecordText">Start Voice Recording</span>
+            <span class="record-timer" id="voiceTimer" style="display:none;">00:00</span>
+          </button>
+
+          <!-- Upload Audio File Button -->
+          <div class="audio-upload-wrap">
+            <input type="file" id="audioFileInput" accept="audio/*,.wav,.mp3,.ogg,.m4a,.webm" style="display:none;" onchange="handleAudioUpload(event)">
+            <button type="button" class="btn-audio-upload" id="btnAudioUpload" onclick="document.getElementById('audioFileInput').click()">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span>Upload Audio File</span>
+            </button>
+          </div>
+
+          <!-- Quick Speech Prompts -->
+          <div class="voice-quick-prompts">
+            <span class="quick-title">Quick Commands:</span>
+            <button type="button" class="prompt-chip" onclick="simulateVoiceQuery('Screen the resumes and find the top candidate')">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+              <span>"Screen candidates"</span>
+            </button>
+            <button type="button" class="prompt-chip" onclick="simulateVoiceQuery('Load Data Engineer preset')">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+              <span>"Load Data Engineer"</span>
+            </button>
+            <button type="button" class="prompt-chip" onclick="simulateVoiceQuery('افرز المرشحين ومين أفضل واحد؟')">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              <span>"افرز المرشحين"</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Audio Waveform Animation while recording -->
+        <div class="recording-visualizer" id="recordingVisualizer" style="display: none;">
+          <div class="recording-indicator">
+            <span class="red-pulse-dot"></span>
+            <span id="recordingStatusText">Recording in progress. Speak clearly...</span>
+          </div>
+          <div class="sound-wave-bars">
+            <span class="bar bar-1"></span>
+            <span class="bar bar-2"></span>
+            <span class="bar bar-3"></span>
+            <span class="bar bar-4"></span>
+            <span class="bar bar-5"></span>
+            <span class="bar bar-6"></span>
+            <span class="bar bar-7"></span>
+            <span class="bar bar-8"></span>
+          </div>
+        </div>
+
+        <!-- Voice Conversation Box -->
+        <div class="voice-conversation-box" id="voiceConversationBox" style="display: none;">
+          <!-- User Record Bubble -->
+          <div class="voice-bubble user-bubble" id="userVoiceBubble">
+            <div class="bubble-header">
+              <div class="bubble-identity">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <span class="bubble-role">User Audio Input:</span>
+              </div>
+              <span class="bubble-time" id="userBubbleTime">Just now</span>
+            </div>
+            <div class="bubble-content">
+              <p class="transcript-text" id="userTranscriptText">Transcribing your speech...</p>
+              <audio id="userAudioPlayer" controls class="custom-audio-player" style="display:none;"></audio>
+            </div>
+          </div>
+
+          <!-- System Voice Response Bubble -->
+          <div class="voice-bubble ai-bubble" id="aiVoiceBubble">
+            <div class="bubble-header">
+              <div class="bubble-identity">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+                  <circle cx="12" cy="5" r="2"></circle>
+                  <path d="M12 7v4"></path>
+                  <line x1="8" y1="16" x2="8" y2="16"></line>
+                  <line x1="16" y1="16" x2="16" y2="16"></line>
+                </svg>
+                <span class="bubble-role">System Audio Response:</span>
+              </div>
+              <span class="action-tag" id="voiceActionTag">Screening Complete</span>
+            </div>
+            <div class="bubble-content">
+              <p class="transcript-text ai-transcript" id="aiTranscriptText">Analyzing candidate profiles...</p>
+              
+              <!-- Built-in Voice Response Player -->
+              <div class="audio-response-player-wrap" id="aiPlayerWrap">
+                <audio id="aiAudioPlayer" class="ai-audio-element"></audio>
+                <div class="ai-player-controls">
+                  <button type="button" class="btn-play-pause" id="btnPlayPauseAi" onclick="togglePlayAiAudio()">
+                    <span id="playPauseIcon">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                      </svg>
+                    </span>
+                    <span class="play-label-text">Play Audio Response</span>
+                  </button>
+                  <button type="button" class="btn-replay" id="btnReplayAi" onclick="replayAiAudio()" title="Replay">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="1 4 1 10 7 10"></polyline>
+                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                    </svg>
+                    <span>Replay</span>
+                  </button>
+                  <div class="audio-wave-anim" id="aiWaveAnim">
+                    <span class="wave-bar"></span>
+                    <span class="wave-bar"></span>
+                    <span class="wave-bar"></span>
+                    <span class="wave-bar"></span>
+                    <span class="wave-bar"></span>
+                  </div>
+                  <span class="audio-time-label" id="aiAudioTime">0:00</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Workspace Grid -->
+    <main class="workspace-grid">
+      <!-- Left Column: Input Forms -->
+      <section class="card input-card">
+        <!-- Step 1: Job Description -->
+        <div class="card-header">
+          <div class="card-title">
+            <span class="step-num">1</span>
+            <h2>Job Description</h2>
+          </div>
+          <button type="button" class="btn-dictate-mini" id="btnDictateJob" onclick="dictateField('jobDescription')" title="Dictate Job Requirements">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+            <span class="btn-dictate-text">Dictate Requirements</span>
+          </button>
+        </div>
+        <div class="card-body">
+          <label for="jobDescription" class="field-label">
+            Target Competencies & Requirements
+          </label>
+          <textarea 
+            id="jobDescription" 
+            class="textarea-custom" 
+            rows="6" 
+            placeholder="Paste or write target job requirements (e.g., Python, SQL, Apache Spark, Airflow, Kafka, REST APIs, Docker, CI/CD)..."
+          ></textarea>
+        </div>
+
+        <div class="card-divider"></div>
+
+        <!-- Step 2: Candidate Resumes -->
+        <div class="card-header">
+          <div class="card-title">
+            <span class="step-num">2</span>
+            <h2>Candidate Resumes</h2>
+          </div>
+          <div class="tab-switch">
+            <button class="tab-btn active" id="tabTextBtn" onclick="switchCandidateTab('text')">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              <span>Text Input</span>
+            </button>
+            <button class="tab-btn" id="tabUploadBtn" onclick="switchCandidateTab('upload')">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              <span>Upload Files (.pdf, .docx, .txt)</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <!-- Text Candidates Mode -->
+          <div id="tabTextContent" class="tab-pane active">
+            <div id="candidatesList" class="candidates-list">
+              <!-- Dynamically populated candidate items -->
+            </div>
+            <button type="button" class="btn-add-candidate" id="btnAddCandidate" onclick="addCandidateRow()">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Add Another Candidate</span>
+            </button>
+          </div>
+
+          <!-- File Upload Mode -->
+          <div id="tabUploadContent" class="tab-pane">
+            <div class="upload-dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+              <input type="file" id="fileInput" multiple accept=".pdf,.docx,.txt" style="display:none;" onchange="handleFileSelect(event)">
+              <div class="dropzone-content">
+                <div class="dropzone-icon-wrap">
+                  <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.75">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                </div>
+                <p class="dropzone-text"><strong>Click to browse</strong> or drag & drop resume files</p>
+                <span class="dropzone-hint">Supported formats: PDF (.pdf), Microsoft Word (.docx), Plain Text (.txt)</span>
+              </div>
+            </div>
+            <div id="selectedFilesList" class="files-preview-list"></div>
+          </div>
+
+          <!-- Screen Action Button -->
+          <div class="action-bar">
+            <button type="button" class="btn-primary" id="btnRunScreening" onclick="runScreening()">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              <span class="btn-text">Screen & Rank Resumes</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Results Dashboard -->
+      <section class="card results-card" id="resultsSection">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="step-num">3</span>
+            <h2>Screening Results & Leaderboard</h2>
+          </div>
+          <div id="resultsMeta" class="results-meta"></div>
+        </div>
+
+        <div class="card-body">
+          <!-- Loading State -->
+          <div id="loadingState" class="state-container" style="display: none;">
+            <div class="spinner"></div>
+            <p>Evaluating candidates with Sublinear TF-IDF & Porter Stemming Root Analysis...</p>
+          </div>
+
+          <!-- Empty State -->
+          <div id="emptyState" class="state-container">
+            <div class="empty-graphic">
+              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <circle cx="11" cy="14" r="3"></circle>
+                <line x1="13.5" y1="16.5" x2="17" y2="20"></line>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </div>
+            <h3>No Screening Results Yet</h3>
+            <p>Select a job preset above or enter candidate resumes, or record your voice requirements, then click <strong>"Screen & Rank Resumes"</strong> to view ranked results and competency breakdowns.</p>
+          </div>
+
+          <!-- Results Container -->
+          <div id="resultsContainer" style="display: none;">
+            <!-- Top Winner Showcase Banner -->
+            <div class="winner-banner" id="winnerBanner">
+              <div class="winner-trophy">
+                <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="8" r="7"></circle>
+                  <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+                </svg>
+              </div>
+              <div class="winner-info">
+                <span class="winner-label">Top Ranked Candidate</span>
+                <h3 class="winner-name" id="winnerName">Candidate Name</h3>
+                <span class="winner-score" id="winnerScore">92.5% Match</span>
+              </div>
+              <button type="button" class="btn-speak-winner" id="btnSpeakWinner" onclick="speakCurrentWinner()" title="Listen to candidate review">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+                <span>Speak Review</span>
+              </button>
+            </div>
+
+            <!-- Ranked Candidates List -->
+            <div class="rank-list" id="rankList">
+              <!-- Rendered rank cards -->
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Voice Tutorial Speaker Modal -->
+  <div class="modal-backdrop" id="voiceTutorialBackdrop" style="display: none;" onclick="closeVoiceTutorial(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="card-icon-badge">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+              <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+            </svg>
+          </div>
+          <div>
+            <h3>Voice Tutorial & System Walkthrough</h3>
+            <p class="modal-subtitle">Interactive spoken guide for candidate screening and NLP ranking</p>
+          </div>
+        </div>
+        <div class="modal-actions-top">
+          <select id="tutorialLangSelect" class="lang-select" onchange="switchTutorialLanguage(this.value)">
+            <option value="en" selected>English Guide</option>
+            <option value="ar">الدليل الصوتي (عربي)</option>
+          </select>
+          <button type="button" class="btn-close-modal" onclick="closeVoiceTutorial()" title="Close Tutorial">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <!-- Spoken Audio Player Toolbar -->
+        <div class="tutorial-audio-bar">
+          <audio id="tutorialAudioPlayer"></audio>
+          <button type="button" class="btn-play-pause" id="btnTutorialPlay" onclick="togglePlayTutorialAudio()">
+            <span id="tutorialPlayIcon">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+            </span>
+            <span id="tutorialPlayLabel">Play Voice Tutorial</span>
+          </button>
+          <button type="button" class="btn-replay" id="btnTutorialReplay" onclick="replayTutorialAudio()" title="Replay">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="1 4 1 10 7 10"></polyline>
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+            </svg>
+            <span>Replay</span>
+          </button>
+          <div class="audio-wave-anim" id="tutorialWaveAnim">
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+          </div>
+          <span class="audio-time-label" id="tutorialAudioTime">0:00</span>
+        </div>
+
+        <!-- Walkthrough Step Cards -->
+        <div class="tutorial-steps-grid" id="tutorialStepsContainer">
+          <!-- Populated dynamically via JS from /api/tutorial/voice -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Ollama AI Chatbot Widget -->
+  <div class="ollama-chat-widget">
+    <!-- Floating Launcher Trigger Button -->
+    <button type="button" class="chat-fab-btn" id="chatFabBtn" onclick="toggleOllamaChat()" title="Chat with AI Recruitment Assistant (Ollama)">
+      <div class="fab-icon-wrap">
+        <svg class="icon-chat-open" id="iconChatOpen" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          <circle cx="8" cy="10" r="1"></circle>
+          <circle cx="12" cy="10" r="1"></circle>
+          <circle cx="16" cy="10" r="1"></circle>
+        </svg>
+        <svg class="icon-chat-close" id="iconChatClose" style="display:none;" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </div>
+      <span class="fab-label">AI Recruiter</span>
+      <span class="fab-online-dot"></span>
+    </button>
+
+    <!-- Chat Drawer / Window -->
+    <div class="chat-panel" id="chatPanel" style="display: none;">
+      <!-- Chat Header -->
+      <div class="chat-header">
+        <div class="chat-header-title">
+          <div class="chat-avatar">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+              <circle cx="12" cy="5" r="2"></circle>
+              <path d="M12 7v4"></path>
+              <line x1="8" y1="16" x2="8" y2="16"></line>
+              <line x1="16" y1="16" x2="16" y2="16"></line>
+            </svg>
+          </div>
+          <div>
+            <h4>AI Recruiter</h4>
+            <span class="chat-subtitle">Powered by Ollama Local LLM</span>
+          </div>
+        </div>
+
+        <div class="chat-header-controls">
+          <div class="model-select-wrap">
+            <span class="status-indicator-dot" id="ollamaStatusDot" title="Ollama Status"></span>
+            <select id="chatModelSelect" class="chat-model-select" title="Select Ollama Model">
+              <option value="mistral:latest">mistral:latest</option>
+              <option value="phi3:mini">phi3:mini</option>
+              <option value="nebula-masri:latest">nebula-masri:latest</option>
+            </select>
+          </div>
+          <button type="button" class="btn-chat-close" onclick="toggleOllamaChat()" title="Minimize Chat">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages Body -->
+      <div class="chat-body" id="chatMessagesBody">
+        <div class="chat-message assistant-msg">
+          <div class="msg-bubble">
+            <p>Hello! I am your <strong>AI Recruitment Consultant</strong> powered by Ollama. I have access to your active job requirements and candidate screening results.</p>
+            <p>How can I assist your hiring evaluation today?</p>
+          </div>
+        </div>
+
+        <!-- Quick Question Chips -->
+        <div class="chat-quick-suggestions">
+          <span class="suggestion-title">Quick Inquiries:</span>
+          <button type="button" class="suggestion-chip" onclick="sendChatPrompt('Generate 4 technical interview questions for the top candidate')">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <span>Interview questions for winner</span>
+          </button>
+          <button type="button" class="suggestion-chip" onclick="sendChatPrompt('Compare the top 2 candidates side by side')">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            <span>Compare top 2 candidates</span>
+          </button>
+          <button type="button" class="suggestion-chip" onclick="sendChatPrompt('Why did the top candidate rank #1 over the others?')">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+            <span>Why did winner rank #1?</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Chat Input Area -->
+      <div class="chat-footer">
+        <div class="chat-input-wrapper">
+          <textarea id="chatInputText" class="chat-textarea" rows="1" placeholder="Ask about candidates or interview questions..." onkeydown="handleChatKeyDown(event)"></textarea>
+          <div class="chat-input-actions">
+            <button type="button" class="btn-chat-mic" id="btnChatMic" onclick="dictateChatMessage()" title="Dictate Message">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </button>
+            <button type="button" class="btn-chat-send" id="btnChatSend" onclick="submitChatMessage()" title="Send">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js?v=3.3"></script>
+</body>
+</html>
