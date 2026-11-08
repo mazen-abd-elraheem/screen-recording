@@ -122,3 +122,110 @@ class TestResumeScreening:
         assert "CandidateB" in captured
         assert "85.40%" in captured
         assert "Top candidate: CandidateA" in captured
+
+
+class TestResumeValidation:
+    """Tests for CV verification and non-CV rejection."""
+
+    def test_genuine_cv_accepted(self):
+        """Verify standard resumes with experience and skills are accepted."""
+        from resume_parser import is_valid_resume
+        cv_text = (
+            "Mazen Abd Elraheem - Software Engineer\n"
+            "Email: mazen@example.com | Phone: +201012345678\n"
+            "Experience: 4 years building backend systems using Python, SQL, and Docker containerization.\n"
+            "Education: Bachelor of Computer Science, Cairo University.\n"
+            "Skills: Python, FastAPI, Flask, PostgreSQL, Git, Redis."
+        )
+        is_valid, reason, details = is_valid_resume(cv_text)
+        assert is_valid is True
+        assert details["has_experience"] is True
+        assert details["has_education"] is True
+        assert details["has_skills"] is True
+
+    def test_invoice_rejected(self):
+        """Verify invoices and financial receipts are rejected as non-CV."""
+        from resume_parser import is_valid_resume
+        invoice = (
+            "TAX INVOICE #98231\n"
+            "Bill To: Global Tech Supplies LLC\n"
+            "Purchase Order: PO-2026-88\n"
+            "Item 1: Server rack - Unit Price: $1,200 - Subtotal: $1,200\n"
+            "Item 2: Cat6 Cables - Unit Price: $150 - Subtotal: $150\n"
+            "Total Amount Due: $1,350. VAT Number: 9940291.\n"
+            "Payment Terms: Net 30 days."
+        )
+        is_valid, reason, details = is_valid_resume(invoice)
+        assert is_valid is False
+        assert "فاتورة" in reason or "Invoice" in reason
+
+    def test_short_or_empty_document_rejected(self):
+        """Verify short phrases and empty documents are rejected."""
+        from resume_parser import is_valid_resume
+        assert is_valid_resume("")[0] is False
+        assert is_valid_resume("Hello, please consider my job application.")[0] is False
+
+    def test_grocery_list_rejected(self):
+        """Verify random unrelated documents without CV sections are rejected."""
+        from resume_parser import is_valid_resume
+        random_doc = (
+            "Weekly Shopping List:\n"
+            "Buy 2 cartons of organic whole milk, 1 loaf of artisan bread,\n"
+            "half dozen fresh eggs, 1 kilo of red apples, granulated white sugar,\n"
+            "ground Colombian coffee beans, green mint tea bags, and chocolate cookies."
+        )
+        is_valid, reason, details = is_valid_resume(random_doc)
+        assert is_valid is False
+        assert "هيكل السيرة الذاتية" in reason or "CV" in reason
+
+    def test_api_validate_resume_endpoint_json(self):
+        """Test POST /api/validate-resume with JSON payload."""
+        from app import app
+        client = app.test_client()
+
+        # Valid candidate
+        res = client.post("/api/validate-resume", json={
+            "name": "Sarah",
+            "text": "Machine Learning Engineer with 5 years experience in Python, pandas, scikit-learn. Education: BSc Computer Science."
+        })
+        assert res.status_code == 200
+        data = res.get_json()
+        assert data["success"] is True
+        assert data["is_valid"] is True
+
+        # Invalid candidate
+        res_inv = client.post("/api/validate-resume", json={
+            "name": "SpamDoc",
+            "text": "Just checking in to say hi to the recruiting team."
+        })
+        assert res_inv.status_code == 200
+        data_inv = res_inv.get_json()
+        assert data_inv["success"] is True
+        assert data_inv["is_valid"] is False
+
+    def test_api_screen_excludes_invalid_resumes(self):
+        """Test POST /api/screen separates valid resumes from rejected ones."""
+        from app import app
+        client = app.test_client()
+
+        payload = {
+            "job_description": "Looking for Python Engineer with SQL and Git",
+            "candidates": [
+                {
+                    "name": "Mazen",
+                    "text": "Data Engineer with 4 years experience in Python, SQL databases, and Git. Education: BSc in Engineering."
+                },
+                {
+                    "name": "InvoiceDoc",
+                    "text": "INVOICE #401 Bill To: Corporation. Subtotal: $400. Total Amount Due: $450. VAT Number: 1029."
+                }
+            ]
+        }
+        res = client.post("/api/screen", json=payload)
+        assert res.status_code == 200
+        data = res.get_json()
+        assert data["success"] is True
+        assert len(data["ranked"]) == 1
+        assert data["ranked"][0]["name"] == "Mazen"
+        assert len(data["rejected"]) == 1
+        assert data["rejected"][0]["name"] == "InvoiceDoc"

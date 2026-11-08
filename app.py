@@ -8,7 +8,7 @@ import sys
 import requests
 from flask import Flask, render_template, request, jsonify
 from main import rank_resumes, screen_candidates
-from resume_parser import extract_text_from_file, analyze_keyword_matches
+from resume_parser import extract_text_from_file, analyze_keyword_matches, is_valid_resume
 from voice_service import process_voice_command, generate_audio_speech, transcribe_audio_file
 
 # Ensure UTF-8 output
@@ -160,30 +160,109 @@ def format_enriched_results(detailed_candidates, resumes):
     return results
 
 
+@app.route("/api/validate-resume", methods=["POST"])
+def validate_resume():
+    """
+    Validates uploaded file(s) or raw candidate text to determine if it's a genuine CV.
+    Returns validation status, reason, and metadata.
+    """
+    try:
+        # 1. Check if files were uploaded via multipart/form-data
+        if "file" in request.files or "files[]" in request.files:
+            files = request.files.getlist("files[]")
+            if not files and "file" in request.files:
+                files = [request.files.get("file")]
+
+            results = []
+            for file in files:
+                if file and file.filename:
+                    fname = file.filename
+                    try:
+                        text = extract_text_from_file(file, fname)
+                        is_valid, reason, details = is_valid_resume(text)
+                        results.append({
+                            "filename": fname,
+                            "is_valid": is_valid,
+                            "reason": reason,
+                            "word_count": details.get("word_count", 0),
+                            "sections": details.get("sections_found", [])
+                        })
+                    except Exception as extract_err:
+                        results.append({
+                            "filename": fname,
+                            "is_valid": False,
+                            "reason": f"تعذر استخراج النصوص من الملف ({str(extract_err)})",
+                            "word_count": 0,
+                            "sections": []
+                        })
+
+            return jsonify({
+                "success": True,
+                "results": results,
+                "all_valid": all(r["is_valid"] for r in results) if results else False
+            })
+
+        # 2. Check if JSON text was sent
+        data = request.get_json(silent=True) or {}
+        text = data.get("text", "")
+        name = data.get("name", "Candidate")
+        is_valid, reason, details = is_valid_resume(text)
+        return jsonify({
+            "success": True,
+            "name": name,
+            "is_valid": is_valid,
+            "reason": reason,
+            "word_count": details.get("word_count", 0),
+            "sections": details.get("sections_found", [])
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route("/api/screen", methods=["POST"])
 def screen_resumes():
     try:
+        rejected_candidates = []
+        resumes = {}
+
         # Check if form data or JSON
         if request.is_json:
             data = request.get_json()
             job_desc = data.get("job_description", "").strip()
             raw_candidates = data.get("candidates", [])
-            resumes = {}
             for c in raw_candidates:
                 name = c.get("name", "").strip()
                 text = c.get("text", "").strip()
                 if name and text:
-                    resumes[name] = text
+                    is_valid, reason, details = is_valid_resume(text)
+                    if is_valid:
+                        resumes[name] = text
+                    else:
+                        rejected_candidates.append({
+                            "name": name,
+                            "filename": name,
+                            "reason": reason,
+                            "word_count": details.get("word_count", 0)
+                        })
         else:
             job_desc = request.form.get("job_description", "").strip()
-            resumes = {}
 
             # Parse text candidates
             names = request.form.getlist("candidate_names[]")
             texts = request.form.getlist("candidate_texts[]")
             for name, text in zip(names, texts):
                 if name.strip() and text.strip():
-                    resumes[name.strip()] = text.strip()
+                    is_valid, reason, details = is_valid_resume(text.strip())
+                    if is_valid:
+                        resumes[name.strip()] = text.strip()
+                    else:
+                        rejected_candidates.append({
+                            "name": name.strip(),
+                            "filename": name.strip(),
+                            "reason": reason,
+                            "word_count": details.get("word_count", 0)
+                        })
 
             # Parse uploaded files (.pdf, .docx, .txt)
             files = request.files.getlist("files[]")
@@ -191,15 +270,37 @@ def screen_resumes():
                 if file and file.filename:
                     fname = file.filename
                     cand_name = os.path.splitext(fname)[0]
-                    extracted_text = extract_text_from_file(file, fname)
-                    if extracted_text.strip():
-                        resumes[cand_name] = extracted_text
+                    try:
+                        extracted_text = extract_text_from_file(file, fname)
+                        if extracted_text.strip():
+                            is_valid, reason, details = is_valid_resume(extracted_text)
+                            if is_valid:
+                                resumes[cand_name] = extracted_text
+                            else:
+                                rejected_candidates.append({
+                                    "name": cand_name,
+                                    "filename": fname,
+                                    "reason": reason,
+                                    "word_count": details.get("word_count", 0)
+                                })
+                    except Exception as extract_err:
+                        rejected_candidates.append({
+                            "name": cand_name,
+                            "filename": fname,
+                            "reason": f"تعذر استخراج النصوص من الملف ({str(extract_err)})",
+                            "word_count": 0
+                        })
 
         if not job_desc:
             return jsonify({"error": "Job description cannot be empty."}), 400
 
         if not resumes:
-            return jsonify({"error": "Please provide at least one candidate resume or upload a file."}), 400
+            reasons_summary = " | ".join(f"{r['filename']}: {r['reason']}" for r in rejected_candidates)
+            error_msg = f"لم يتم قبول أي ملف كسيرة ذاتية صالحة. {reasons_summary}" if rejected_candidates else "Please provide at least one valid candidate resume or upload a valid CV file."
+            return jsonify({
+                "error": error_msg,
+                "rejected": rejected_candidates
+            }), 400
 
         # Run Universal Screening Engine
         detailed_candidates = screen_candidates(job_desc, resumes)
@@ -209,7 +310,9 @@ def screen_resumes():
             "success": True,
             "total_candidates": len(results),
             "top_candidate": results[0]["name"] if results else None,
-            "ranked": results
+            "ranked": results,
+            "rejected": rejected_candidates,
+            "total_rejected": len(rejected_candidates)
         })
 
     except Exception as e:

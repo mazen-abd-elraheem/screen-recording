@@ -178,9 +178,9 @@ python main.py
 python -m pytest test_voice.py test_main.py -v
 ```
 
-### ملخص الاختبارات التي يتم إجراؤها (26 اختباراً):
+### ملخص الاختبارات التي يتم إجراؤها (32 اختباراً):
 
-#### أولاً: اختبارات خوارزميات الفرز والذكاء الاصطناعي (`test_main.py`):
+#### أولاً: اختبارات خوارزميات الفرز والذكاء الاصطناعي والتحقق من الـ CV (`test_main.py`):
 1. `test_default_dataset_ranking`: التحقق من تقييم وترتيب جميع المرشحين بدقة.
 2. `test_ranking_is_sorted_descending`: التأكد من أن الترتيب تنازلي دائمًا (الأفضل أولاً).
 3. `test_scores_are_within_valid_bounds`: التأكد من أن جميع النسب تقع حصراً بين 0% و 100%.
@@ -191,24 +191,50 @@ python -m pytest test_voice.py test_main.py -v
 8. `test_relative_qualification_ranking`: التأكد من أن المرشح الأكثر كفاءة يسبق دائماً الأقل كفاءة.
 9. `test_single_candidate`: التحقق من سلامة العمل عند وجود مرشح واحد فقط.
 10. `test_display_results_runs_without_error`: التحقق من عمل دالة الطباعة ومخرجات الكونسول بسلاسة.
+11. `test_genuine_cv_accepted`: التحقق من قبول السير الذاتية الحقيقية المكتملة الأقسام والمهارات.
+12. `test_invoice_rejected`: التحقق من اكتشاف واستبعاد الفواتير والمستندات المالية تلقائياً.
+13. `test_short_or_empty_document_rejected`: استبعاد الملفات الفارغة والنصوص القصيرة جداً.
+14. `test_grocery_list_rejected`: استبعاد قوائم الشراء والنصوص العشوائية التي لا تملك هيكل السيرة الذاتية.
+15. `test_api_validate_resume_endpoint_json`: فحص نقطة النهاية الفورية `/api/validate-resume` عبر JSON.
+16. `test_api_screen_excludes_invalid_resumes`: التحقق من فصل المرشحين الصالحين عن المرفوضين في `/api/screen`.
 
 #### ثانياً: اختبارات نظام الصوت والتسجيل والرد الصوتي (`test_voice.py`):
-11. `test_is_arabic_text_detection`: التأكد من الكشف الذكي عن اللغة العربية والإنجليزية في النصوص المنطوقة.
-12. `test_generate_audio_speech_english`: التحقق من توليد تسجيل صوتي عالي الجودة بالإنجليزية بصيغة Base64.
-13. `test_generate_audio_speech_arabic`: التحقق من توليد تسجيل صوتي باللغة العربية.
-14. `test_generate_audio_speech_empty_text_fallback`: التحقق من المعالجة الآمنة للنصوص الفارغة بدون أي توقف.
-15. `test_formulate_screening_speech_response`: التحقق من صياغة ملخص صوتي واضح ودقيق للمرشح الفائز ومهاراته.
-16. `test_process_voice_command_screen_intent`: التحقق من إدراك نية الفرز عبر الصوت وإرجاع النتائج مصحوبة برد صوتي.
-17. `test_process_voice_command_load_preset`: التحقق من استجابة النظام الصوتي لأمر تحميل القوالب الجاهزة.
-18. `test_process_voice_command_update_job`: التحقق من قدرة النظام على إملاء وتحديث متطلبات الوظيفة صوتياً.
-19. `test_transcribe_audio_file_safe_handling`: التحقق من أمان معالجة وقراءة ملفات الصوت بصيغة WAV ومعالجة الصمت.
-20. `test_api_voice_speak_success`: فحص نقطة النهاية `/api/voice/speak` وتوليد الصوت بنجاح.
-21. `test_api_voice_speak_missing_text`: التحقق من التحقق من صحة المدخلات وإرجاع كود 400 عند غياب النص.
-22. `test_api_voice_interact_with_text_command`: فحص تكامل نقطة النهاية `/api/voice/interact` لفرز المرشحين صوتياً.
-23. `test_api_voice_interact_with_audio_file_upload`: التحقق من قبول ومعالجة ملف صوتي مرفوع بتقنية `multipart/form-data`.
-24. `test_api_voice_transcribe_missing_file`: التحقق من المعالجة السليمة للأخطاء في نقطة تفريغ الصوت.
-25. `test_voice_tutorial_endpoint_and_caching`: التحقق من عمل نقطة تفريغ الدليل الصوتي وتفعيل الكاش السريع لمنع التكرار.
-26. `test_api_voice_transcribe_with_audio_file`: التحقق من قبول واستقبال ملفات الريكورد الصوتي وتفريغها بنجاح.
+17. `test_is_arabic_text_detection`: التأكد من الكشف الذكي عن اللغة العربية والإنجليزية في النصوص المنطوقة.
+18. `test_generate_audio_speech_english`: التحقق من توليد تسجيل صوتي عالي الجودة بالإنجليزية بصيغة Base64.
+19. `test_generate_audio_speech_arabic`: التحقق من توليد تسجيل صوتي باللغة العربية.
+20. `test_generate_audio_speech_empty_text_fallback`: التحقق من المعالجة الآمنة للنصوص الفارغة بدون أي توقف.
+21. `test_formulate_screening_speech_response`: التحقق من صياغة ملخص صوتي واضح ودقيق للمرشح الفائز ومهاراته.
+22. `test_process_voice_command_screen_intent`: التحقق من إدراك نية الفرز عبر الصوت وإرجاع النتائج مصحوبة برد صوتي.
+23. `test_process_voice_command_load_preset`: التحقق من استجابة النظام الصوتي لأمر تحميل القوالب الجاهزة.
+24. `test_process_voice_command_update_job`: التحقق من قدرة النظام على إملاء وتحديث متطلبات الوظيفة صوتياً.
+25. `test_transcribe_audio_file_safe_handling`: التحقق من أمان معالجة وقراءة ملفات الصوت بصيغة WAV ومعالجة الصمت.
+26. `test_api_voice_speak_success`: فحص نقطة النهاية `/api/voice/speak` وتوليد الصوت بنجاح.
+27. `test_api_voice_speak_missing_text`: التحقق من التحقق من صحة المدخلات وإرجاع كود 400 عند غياب النص.
+28. `test_api_voice_interact_with_text_command`: فحص تكامل نقطة النهاية `/api/voice/interact` لفرز المرشحين صوتياً.
+29. `test_api_voice_interact_with_audio_file_upload`: التحقق من قبول ومعالجة ملف صوتي مرفوع بتقنية `multipart/form-data`.
+30. `test_api_voice_transcribe_missing_file`: التحقق من المعالجة السليمة للأخطاء في نقطة تفريغ الصوت.
+31. `test_voice_tutorial_endpoint_and_caching`: التحقق من عمل نقطة تفريغ الدليل الصوتي وتفعيل الكاش السريع لمنع التكرار.
+32. `test_api_voice_transcribe_with_audio_file`: التحقق من قبول واستقبال ملفات الريكورد الصوتي وتفريغها بنجاح.
 
-**النتيجة النهائية:** نجاح **26 من أصل 26 اختباراً** بنسبة **100%**.
+**النتيجة النهائية:** نجاح **32 من أصل 32 اختباراً** بنسبة **100%**.
+
+---
+
+## 9. محرك التحقق من صحة السير الذاتية واستبعاد المستندات غير الصالحة (CV Validation Engine)
+
+حرصاً على نقاء نتائج الفرز وعدم إهدار موارد التقييم في ملفات غير ذات صلة (كالفواتير، الإيصالات، قوائم التسوق، أو الملفات الفارغة والقصيرة)، تم تزويد النظام بـ **محرك تحقق ذكي ثنائي الطبقات (Dual-Layer Validation Engine)**:
+
+### 1. طبقة التحقق الفوري عند الرفع (Dropzone / Instant Upload Validation):
+- بمجرد قيام المستخدم برفع ملف أو عدة ملفات بصيغ (`.pdf`, `.docx`, `.txt`)، يقوم المتصفح فوراً باستدعاء نقطة النهاية السريعة `POST /api/validate-resume`.
+- إذا كان المستند غير صالح كـ CV:
+  1. يتم **حذفه تلقائياً من قائمة الملفات الجاهزة للفرز** فوراً لمنع وصوله لمرحلة الفرز.
+  2. يظهر **تنبيه أحمر عائم (Toast Notification)** يوضح اسم الملف وسبب استبعاده بالتحديد (مثلاً: الملف قصير جداً، أو تم اكتشاف نمط فاتورة مالية، أو لا يحتوي على أقسام الخبرة والتعليم).
+- إذا كان المستند سليماً: يظهر تنبيه أخضر يؤكد قبول الملف وإضافته بنجاح.
+
+### 2. طبقة الحماية الخلفية والفرز (Backend Screening Pipeline):
+- في نقطة النهاية `POST /api/screen`، يتم فحص كل مرشح (سواء رُفع كملف أو أُدخل كنص).
+- يتم عزل الملفات غير الصالحة في قائمة منفصلة `rejected_candidates`، وتمرير السير الذاتية الحقيقية فقط لمحرك حساب درجات المواءمة (Cosine Similarity & Skill Matching).
+- في لوحة النتائج بالواجهة الأمامية:
+  - يتصدر المرشحون الحقيقيون المقبولون فقط لوحة الترتيب التنازلي.
+  - تظهر بطاقة سفلية مخصصة **"الملفات والمستندات المستبعدة (Excluded / Rejected Files)"** توضح الملفات المرفوضة وسبب استبعادها، مع شارة إشعار واضحة لتفادي أي التباس للمسؤول.
 

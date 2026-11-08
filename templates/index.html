@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=3.4">
+  <link rel="stylesheet" href="/static/style.css?v=3.5">
 </head>
 <body class="saas-theme">
   <!-- Top Executive Navigation Bar -->
@@ -448,6 +448,21 @@
             <div class="rank-list" id="rankList">
               <!-- Rendered rank cards -->
             </div>
+
+            <!-- Excluded / Rejected Non-CV Files Section -->
+            <div class="rejected-section" id="rejectedSection" style="display: none;">
+              <div class="rejected-header">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="15" y1="9" x2="9" y2="15"></line>
+                  <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+                <h4>الملفات المستبعدة (غير مطابقة لهيكل السيرة الذاتية):</h4>
+              </div>
+              <div class="rejected-list" id="rejectedList">
+                <!-- Rendered rejected cards -->
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -653,6 +668,9 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=3.4"></script>
+  <!-- Floating Toast Notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/static/app.js?v=3.5"></script>
 </body>
 </html>

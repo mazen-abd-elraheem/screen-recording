@@ -75,6 +75,8 @@ function clearAll() {
   addCandidateRow('Candidate 1', '');
   addCandidateRow('Candidate 2', '');
   document.getElementById('resultsContainer').style.display = 'none';
+  const rejSection = document.getElementById('rejectedSection');
+  if (rejSection) rejSection.style.display = 'none';
   document.getElementById('emptyState').style.display = 'block';
   currentRankedResults = [];
 }
@@ -125,13 +127,70 @@ function handleFileSelect(e) {
   handleFiles(e.target.files);
 }
 
-function handleFiles(files) {
+// Floating Toast Notification Utility
+function showToast(message, type = 'info', duration = 4500) {
+  let container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `toast-item ${type}`;
+  toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(40px)';
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
+async function handleFiles(files) {
+  if (!files || files.length === 0) return;
+
+  const dropzoneText = document.querySelector('.dropzone-text');
+  const originalHtml = dropzoneText ? dropzoneText.innerHTML : '';
+  if (dropzoneText) {
+    dropzoneText.innerHTML = '<span class="red-pulse-dot" style="display:inline-block; margin-right:6px;"></span> جاري التحقق من صحة هيكل السير الذاتية (Validating CV files)...';
+  }
+
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    if (!uploadedFiles.some(f => f.name === file.name)) {
+    if (uploadedFiles.some(f => f.name === file.name)) continue;
+
+    // Verify file via /api/validate-resume endpoint
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/validate-resume', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      const valResult = (data.results && data.results[0]) ? data.results[0] : null;
+
+      if (valResult && valResult.is_valid) {
+        uploadedFiles.push(file);
+        showToast(`✅ تم قبول "${file.name}" كسيرة ذاتية صالحة ومؤهلة للفرز.`, 'success', 3500);
+      } else {
+        const reason = valResult ? valResult.reason : 'الملف لا يستوفي هيكل السيرة الذاتية.';
+        showToast(`❌ تم استبعاد "${file.name}": ${reason}`, 'error', 6500);
+      }
+    } catch (e) {
+      console.warn('Validation network note:', e);
       uploadedFiles.push(file);
     }
   }
+
+  if (dropzoneText) {
+    dropzoneText.innerHTML = originalHtml;
+  }
+
   renderFilesList();
 }
 
@@ -227,6 +286,11 @@ async function runScreening() {
     loading.style.display = 'none';
 
     if (!response.ok) {
+      if (data.rejected && data.rejected.length > 0) {
+        data.rejected.forEach(r => {
+          showToast(`❌ تم استبعاد "${r.filename || r.name}": ${r.reason}`, 'error', 7000);
+        });
+      }
       alert(data.error || 'Failed to screen resumes.');
       empty.style.display = 'block';
       return;
@@ -324,6 +388,29 @@ function displayResults(data) {
       </div>
     `;
   }).join('');
+
+  // Render Excluded / Rejected Non-CV Files Section
+  const rejSection = document.getElementById('rejectedSection');
+  const rejList = document.getElementById('rejectedList');
+  if (rejSection && rejList) {
+    if (data.rejected && data.rejected.length > 0) {
+      rejSection.style.display = 'block';
+      rejList.innerHTML = data.rejected.map(r => `
+        <div class="rejected-card">
+          <div class="rejected-card-header">
+            <div class="rejected-title-wrap">
+              <span class="rejected-badge">❌ مستبعد - ليس سيرة ذاتية</span>
+              <strong class="rejected-name">${escapeHtml(r.filename || r.name)}</strong>
+            </div>
+          </div>
+          <p class="rejected-reason">${escapeHtml(r.reason)}</p>
+        </div>
+      `).join('');
+    } else {
+      rejSection.style.display = 'none';
+      rejList.innerHTML = '';
+    }
+  }
 }
 
 // ============================================================================
