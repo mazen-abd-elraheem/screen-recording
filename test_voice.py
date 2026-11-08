@@ -194,3 +194,41 @@ class TestVoiceApiIntegration:
         assert res.status_code == 400
         data = res.get_json()
         assert data["success"] is False
+
+    def test_voice_tutorial_endpoint_and_caching(self, client):
+        """Test GET /api/tutorial/voice returns valid script, steps, audio and caches response."""
+        from app import _TUTORIAL_AUDIO_CACHE
+        _TUTORIAL_AUDIO_CACHE.clear()
+
+        # First call: populates cache
+        res1 = client.get("/api/tutorial/voice?language=ar")
+        assert res1.status_code == 200
+        data1 = res1.get_json()
+        assert data1["success"] is True
+        assert data1["language"] == "ar"
+        assert len(data1["steps"]) == 4
+        assert "audio_base64" in data1
+        assert "ar" in _TUTORIAL_AUDIO_CACHE
+
+        # Second call: must return identical cached object instantly
+        res2 = client.get("/api/tutorial/voice?language=ar")
+        assert res2.status_code == 200
+        data2 = res2.get_json()
+        assert data2 == data1
+
+    def test_api_voice_transcribe_with_audio_file(self, client):
+        """Test POST /api/voice/transcribe accepts valid PCM WAV audio file."""
+        wav_bytes = create_dummy_wav_bytes(0.5)
+        data = {
+            "audio": (io.BytesIO(wav_bytes), "chat_voice.wav"),
+            "language": "en"
+        }
+        res = client.post(
+            "/api/voice/transcribe",
+            data=data,
+            content_type="multipart/form-data"
+        )
+        assert res.status_code == 200
+        resp_data = res.get_json()
+        # Even on silent dummy wav, endpoint safely handles it
+        assert "success" in resp_data

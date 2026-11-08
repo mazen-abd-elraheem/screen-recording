@@ -486,29 +486,45 @@ def generate_smart_recruitment_reply(user_query: str, job_desc: str, candidates:
     )
 
 
+# In-memory cache for static tutorial guides to eliminate redundant TTS synthesis
+_TUTORIAL_AUDIO_CACHE = {}
+
+
 @app.route("/api/tutorial/voice", methods=["GET", "POST"])
 def voice_tutorial():
     """
     Generate or return the spoken voice tutorial audio and visual step guide.
+    Caches the audio response in memory to avoid repetitive generation and network latency.
     """
     try:
         data = request.get_json(silent=True) if request.is_json else {}
         language = request.args.get("language") or (data.get("language") if data else "en")
         is_ar = language in ["ar", "ar-EG", "ar-SA"]
+        cache_key = "ar" if is_ar else "en"
+
+        # Return instantly from cache if already generated
+        if cache_key in _TUTORIAL_AUDIO_CACHE:
+            return jsonify(_TUTORIAL_AUDIO_CACHE[cache_key])
 
         script_text = TUTORIAL_TEXT_AR if is_ar else TUTORIAL_TEXT_EN
         steps = TUTORIAL_STEPS_AR if is_ar else TUTORIAL_STEPS_EN
 
         audio_res = generate_audio_speech(script_text, language="ar" if is_ar else "en")
 
-        return jsonify({
+        payload = {
             "success": True,
-            "language": "ar" if is_ar else "en",
+            "language": cache_key,
             "script": script_text,
             "steps": steps,
             "audio_base64": audio_res.get("audio_base64"),
             "audio_format": audio_res.get("format", "mp3")
-        })
+        }
+
+        # Cache on successful generation
+        if audio_res.get("audio_base64"):
+            _TUTORIAL_AUDIO_CACHE[cache_key] = payload
+
+        return jsonify(payload)
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 

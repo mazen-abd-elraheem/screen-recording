@@ -850,6 +850,8 @@ function escapeHtml(str) {
 // ============================================================================
 let tutorialAudioData = null;
 let tutorialSteps = [];
+const tutorialClientCache = {};
+let isTutorialLoading = false;
 
 async function openVoiceTutorial(requestedLang) {
   const modal = document.getElementById('voiceTutorialBackdrop');
@@ -859,6 +861,16 @@ async function openVoiceTutorial(requestedLang) {
   const select = document.getElementById('tutorialLangSelect');
   const lang = requestedLang || (select ? select.value : 'en') || 'en';
   if (select) select.value = lang;
+
+  // Use cached tutorial audio and steps if already fetched
+  if (tutorialClientCache[lang]) {
+    applyTutorialData(tutorialClientCache[lang]);
+    return;
+  }
+
+  // Prevent duplicate concurrent requests
+  if (isTutorialLoading) return;
+  isTutorialLoading = true;
 
   const stepsContainer = document.getElementById('tutorialStepsContainer');
   if (stepsContainer) {
@@ -870,21 +882,34 @@ async function openVoiceTutorial(requestedLang) {
     const data = await res.json();
 
     if (data.success) {
-      tutorialAudioData = data;
-      tutorialSteps = data.steps || [];
-      renderTutorialSteps(tutorialSteps);
-
-      const player = document.getElementById('tutorialAudioPlayer');
-      if (player && data.audio_base64) {
-        player.src = data.audio_base64;
-        player.play().catch(e => console.log('Tutorial auto-play note:', e));
-      }
+      tutorialClientCache[lang] = data;
+      applyTutorialData(data);
     }
   } catch (err) {
     console.error('Failed to load voice tutorial:', err);
     if (stepsContainer) {
       stepsContainer.innerHTML = '<p style="color:var(--rose-text); font-size:0.85rem;">Failed to load voice tutorial audio.</p>';
     }
+  } finally {
+    isTutorialLoading = false;
+  }
+}
+
+function applyTutorialData(data) {
+  tutorialAudioData = data;
+  tutorialSteps = data.steps || [];
+  renderTutorialSteps(tutorialSteps);
+
+  const player = document.getElementById('tutorialAudioPlayer');
+  if (player && data.audio_base64) {
+    // Pause other audio players to prevent sound conflict
+    const aiPlayer = document.getElementById('aiAudioPlayer');
+    if (aiPlayer && !aiPlayer.paused) aiPlayer.pause();
+
+    player.loop = false;
+    player.src = data.audio_base64;
+    player.currentTime = 0;
+    player.play().catch(e => console.log('Tutorial auto-play note:', e));
   }
 }
 
@@ -903,15 +928,38 @@ function renderTutorialSteps(steps) {
   `).join('');
 }
 
+function stopTutorialAudio() {
+  const player = document.getElementById('tutorialAudioPlayer');
+  if (!player) return;
+  player.pause();
+  player.currentTime = 0;
+
+  const waveAnim = document.getElementById('tutorialWaveAnim');
+  const playIcon = document.getElementById('tutorialPlayIcon');
+  const playLabel = document.getElementById('tutorialPlayLabel');
+  if (waveAnim) waveAnim.classList.remove('playing');
+  if (playIcon) {
+    playIcon.innerHTML = `
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+      </svg>
+    `;
+  }
+  if (playLabel) playLabel.textContent = 'Play Voice Tutorial';
+
+  document.querySelectorAll('.tutorial-step-card').forEach((card, idx) => {
+    card.classList.toggle('active-step', idx === 0);
+  });
+}
+
 function closeVoiceTutorial(e) {
+  if (e && e.target && e.target !== document.getElementById('voiceTutorialBackdrop') && !e.target.closest('.btn-close-modal')) {
+    return;
+  }
   const modal = document.getElementById('voiceTutorialBackdrop');
   if (modal) modal.style.display = 'none';
 
-  const player = document.getElementById('tutorialAudioPlayer');
-  if (player) {
-    player.pause();
-    player.currentTime = 0;
-  }
+  stopTutorialAudio();
 }
 
 function switchTutorialLanguage(lang) {
@@ -944,6 +992,7 @@ function setupTutorialPlayerEvents() {
   const timeLabel = document.getElementById('tutorialAudioTime');
 
   if (!player) return;
+  player.loop = false; // Strictly prevent looping
 
   const svgPlay = `
     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
@@ -973,6 +1022,11 @@ function setupTutorialPlayerEvents() {
     if (waveAnim) waveAnim.classList.remove('playing');
     if (playIcon) playIcon.innerHTML = svgPlay;
     if (playLabel) playLabel.textContent = 'Play Guide';
+    player.currentTime = 0;
+    // Clean stop without looping or re-triggering
+    document.querySelectorAll('.tutorial-step-card').forEach((card, idx) => {
+      card.classList.toggle('active-step', idx === 0);
+    });
   });
 
   player.addEventListener('timeupdate', () => {
@@ -988,14 +1042,250 @@ function setupTutorialPlayerEvents() {
       });
     }
   });
+
+  // Close tutorial modal on Escape key press
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('voiceTutorialBackdrop');
+      if (modal && modal.style.display !== 'none') {
+        closeVoiceTutorial();
+      }
+    }
+  });
 }
 
 // ============================================================================
-// Ollama AI Recruitment Assistant Chatbot
+// Ollama AI Recruitment Assistant Chatbot with Interactive Voice Recording
 // ============================================================================
 let chatHistory = [];
-let isChatDictating = false;
-let chatDictationRecognition = null;
+let isChatRecording = false;
+let chatAudioContext = null;
+let chatMediaStream = null;
+let chatScriptProcessor = null;
+let chatRecordedBuffers = [];
+let chatRecordingStartTime = null;
+let chatRecordingTimerInterval = null;
+let chatSpeechRecInstance = null;
+let chatLiveSpeechTranscript = '';
+
+async function toggleChatVoiceRecording() {
+  if (!isChatRecording) {
+    await startChatVoiceRecording();
+  } else {
+    await stopChatVoiceRecordingAndSend();
+  }
+}
+
+async function startChatVoiceRecording() {
+  // Stop other playing audio
+  stopTutorialAudio();
+  const aiPlayer = document.getElementById('aiAudioPlayer');
+  if (aiPlayer && !aiPlayer.paused) aiPlayer.pause();
+
+  try {
+    chatMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    chatAudioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+    const sourceNode = chatAudioContext.createMediaStreamSource(chatMediaStream);
+
+    chatScriptProcessor = chatAudioContext.createScriptProcessor(4096, 1, 1);
+    chatRecordedBuffers = [];
+
+    chatScriptProcessor.onaudioprocess = (e) => {
+      if (!isChatRecording) return;
+      const inputData = e.inputBuffer.getChannelData(0);
+      chatRecordedBuffers.push(new Float32Array(inputData));
+    };
+
+    sourceNode.connect(chatScriptProcessor);
+    chatScriptProcessor.connect(chatAudioContext.destination);
+
+    // Parallel Speech Recognition for real-time visual feedback
+    chatLiveSpeechTranscript = '';
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRec) {
+      try {
+        chatSpeechRecInstance = new SpeechRec();
+        const selectedLang = document.getElementById('voiceLangSelect') ? document.getElementById('voiceLangSelect').value : 'auto';
+        chatSpeechRecInstance.lang = selectedLang === 'ar' ? 'ar-EG' : 'en-US';
+        chatSpeechRecInstance.continuous = true;
+        chatSpeechRecInstance.interimResults = true;
+        chatSpeechRecInstance.onresult = (evt) => {
+          let text = '';
+          for (let i = 0; i < evt.results.length; ++i) {
+            text += evt.results[i][0].transcript;
+          }
+          chatLiveSpeechTranscript = text;
+          if (text) {
+            const statusEl = document.getElementById('chatRecStatusText');
+            if (statusEl) statusEl.textContent = `Hearing: "${text.slice(-30)}"`;
+          }
+        };
+        chatSpeechRecInstance.start();
+      } catch (err) {
+        console.warn('Chat SpeechRecognition init note:', err);
+      }
+    }
+
+    // UI Updates
+    isChatRecording = true;
+    chatRecordingStartTime = Date.now();
+
+    const banner = document.getElementById('chatRecordingBanner');
+    if (banner) banner.style.display = 'flex';
+
+    const micBtn = document.getElementById('btnChatMic');
+    if (micBtn) {
+      micBtn.classList.add('recording');
+      micBtn.title = 'Stop Voice Recording & Send (إنهاء وإرسال التسجيل)';
+    }
+
+    const statusEl = document.getElementById('chatRecStatusText');
+    if (statusEl) statusEl.textContent = 'Recording Voice Message... Speak clearly';
+
+    // Start Recording Timer
+    clearInterval(chatRecordingTimerInterval);
+    chatRecordingTimerInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - chatRecordingStartTime) / 1000);
+      const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+      const secs = String(elapsed % 60).padStart(2, '0');
+      const timerEl = document.getElementById('chatRecTimer');
+      if (timerEl) timerEl.textContent = `${mins}:${secs}`;
+    }, 500);
+
+  } catch (err) {
+    console.error('Chat microphone access failed:', err);
+    alert(
+      '⚠️ Microphone Access Error:\n' +
+      (err.name === 'NotAllowedError'
+        ? 'Microphone permission was denied. Please allow microphone access in your browser address bar.\nيرجى السماح بالوصول للميكروفون من إعدادات المتصفح.'
+        : err.message)
+    );
+  }
+}
+
+async function stopChatVoiceRecordingAndSend() {
+  if (!isChatRecording) return;
+  isChatRecording = false;
+
+  clearInterval(chatRecordingTimerInterval);
+
+  if (chatSpeechRecInstance) {
+    try { chatSpeechRecInstance.stop(); } catch (e) {}
+  }
+
+  if (chatScriptProcessor) chatScriptProcessor.disconnect();
+  if (chatMediaStream) {
+    chatMediaStream.getTracks().forEach(track => track.stop());
+  }
+
+  const micBtn = document.getElementById('btnChatMic');
+  if (micBtn) {
+    micBtn.classList.remove('recording');
+    micBtn.title = 'Record Voice Message (تسجيل صوتي)';
+  }
+
+  const statusEl = document.getElementById('chatRecStatusText');
+  if (statusEl) statusEl.textContent = 'Transcribing voice record...';
+
+  // Merge Float32Array PCM samples
+  let totalLength = 0;
+  for (const b of chatRecordedBuffers) totalLength += b.length;
+  const mergedSamples = new Float32Array(totalLength);
+  let offset = 0;
+  for (const b of chatRecordedBuffers) {
+    mergedSamples.set(b, offset);
+    offset += b.length;
+  }
+
+  const sampleRate = (chatAudioContext && chatAudioContext.sampleRate) ? chatAudioContext.sampleRate : 16000;
+  if (chatAudioContext) {
+    try { chatAudioContext.close(); } catch (e) {}
+  }
+
+  const banner = document.getElementById('chatRecordingBanner');
+  if (banner) banner.style.display = 'none';
+
+  // Ignore ultra short clicks (< 0.25s) unless live speech captured
+  if (mergedSamples.length < sampleRate * 0.25) {
+    if (chatLiveSpeechTranscript) {
+      document.getElementById('chatInputText').value = chatLiveSpeechTranscript;
+      submitChatMessage(true);
+    }
+    return;
+  }
+
+  // Encode to Standard 16-bit PCM WAV Blob
+  const wavBlob = encodeWAV(mergedSamples, sampleRate);
+
+  // Send to backend transcription endpoint
+  const selectedLang = document.getElementById('voiceLangSelect') ? document.getElementById('voiceLangSelect').value : 'auto';
+  const formData = new FormData();
+  formData.append('audio', wavBlob, 'chat_voice.wav');
+  formData.append('language', selectedLang);
+
+  try {
+    const res = await fetch('/api/voice/transcribe', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+
+    let finalTranscribedText = (data && data.success && data.text) ? data.text.trim() : '';
+
+    // Fallback to client speech recognition if backend was empty
+    if (!finalTranscribedText && chatLiveSpeechTranscript) {
+      finalTranscribedText = chatLiveSpeechTranscript.trim();
+    }
+
+    if (finalTranscribedText) {
+      const input = document.getElementById('chatInputText');
+      if (input) input.value = finalTranscribedText;
+      // Auto-submit voice recorded message
+      submitChatMessage(true);
+    } else {
+      alert('لم يتم التعرف على الصوت بوضوح، يرجى التحدث بوضوح وإعادة المحاولة.\nCould not detect clear speech in the voice recording. Please speak clearly into your microphone and try again.');
+    }
+
+  } catch (err) {
+    console.error('Chat voice transcription error:', err);
+    if (chatLiveSpeechTranscript) {
+      const input = document.getElementById('chatInputText');
+      if (input) input.value = chatLiveSpeechTranscript;
+      submitChatMessage(true);
+    } else {
+      alert('Voice transcription error: ' + err.message);
+    }
+  }
+}
+
+function cancelChatVoiceRecording() {
+  if (!isChatRecording) return;
+  isChatRecording = false;
+
+  clearInterval(chatRecordingTimerInterval);
+
+  if (chatSpeechRecInstance) {
+    try { chatSpeechRecInstance.stop(); } catch (e) {}
+  }
+
+  if (chatScriptProcessor) chatScriptProcessor.disconnect();
+  if (chatMediaStream) {
+    chatMediaStream.getTracks().forEach(track => track.stop());
+  }
+
+  if (chatAudioContext) {
+    try { chatAudioContext.close(); } catch (e) {}
+  }
+
+  const banner = document.getElementById('chatRecordingBanner');
+  if (banner) banner.style.display = 'none';
+
+  const micBtn = document.getElementById('btnChatMic');
+  if (micBtn) {
+    micBtn.classList.remove('recording');
+    micBtn.title = 'Record Voice Message (تسجيل صوتي)';
+  }
+}
 
 async function fetchOllamaModels() {
   const select = document.getElementById('chatModelSelect');
@@ -1060,7 +1350,7 @@ function sendChatPrompt(promptText) {
   }
 }
 
-async function submitChatMessage() {
+async function submitChatMessage(isVoiceNote = false) {
   const input = document.getElementById('chatInputText');
   const body = document.getElementById('chatMessagesBody');
   const select = document.getElementById('chatModelSelect');
@@ -1071,8 +1361,8 @@ async function submitChatMessage() {
 
   input.value = '';
 
-  // Append user bubble
-  appendChatBubble('user', message);
+  // Append user bubble with voice note badge if recorded via mic
+  appendChatBubble('user', message, '', isVoiceNote);
   chatHistory.push({ role: 'user', content: message });
 
   // Add temporary loading typing indicator
@@ -1128,7 +1418,7 @@ async function submitChatMessage() {
   }
 }
 
-function appendChatBubble(role, text, modelName = '') {
+function appendChatBubble(role, text, modelName = '', isVoiceNote = false) {
   const body = document.getElementById('chatMessagesBody');
   if (!body) return;
 
@@ -1153,7 +1443,17 @@ function appendChatBubble(role, text, modelName = '') {
       </div>
     `;
   } else {
-    msgDiv.innerHTML = `<div class="msg-bubble">${formatted}</div>`;
+    const voiceBadgeHtml = isVoiceNote ? `
+      <div class="voice-note-badge">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+        </svg>
+        <span>Voice Recording</span>
+      </div>
+    ` : '';
+    msgDiv.innerHTML = `<div class="msg-bubble">${voiceBadgeHtml}${formatted}</div>`;
   }
 
   body.appendChild(msgDiv);
@@ -1215,51 +1515,5 @@ async function speakMessageText(btn, text) {
   } catch (err) {
     btn.innerHTML = originalSvg;
     console.warn('TTS playback failed:', err);
-  }
-}
-
-// Dictate chat input
-function dictateChatMessage() {
-  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const btn = document.getElementById('btnChatMic');
-  const input = document.getElementById('chatInputText');
-  if (!SpeechRec || !btn || !input) return;
-
-  if (isChatDictating && chatDictationRecognition) {
-    chatDictationRecognition.stop();
-    isChatDictating = false;
-    btn.classList.remove('dictating');
-    return;
-  }
-
-  try {
-    chatDictationRecognition = new SpeechRec();
-    const selectedLang = document.getElementById('voiceLangSelect') ? document.getElementById('voiceLangSelect').value : 'auto';
-    chatDictationRecognition.lang = selectedLang === 'ar' ? 'ar-EG' : 'en-US';
-    chatDictationRecognition.continuous = false;
-
-    isChatDictating = true;
-    btn.classList.add('dictating');
-
-    chatDictationRecognition.onresult = (e) => {
-      const transcript = e.results[0][0].transcript;
-      const cur = input.value.trim();
-      input.value = cur ? `${cur} ${transcript}` : transcript;
-    };
-
-    chatDictationRecognition.onend = () => {
-      isChatDictating = false;
-      btn.classList.remove('dictating');
-    };
-
-    chatDictationRecognition.onerror = () => {
-      isChatDictating = false;
-      btn.classList.remove('dictating');
-    };
-
-    chatDictationRecognition.start();
-  } catch (err) {
-    isChatDictating = false;
-    btn.classList.remove('dictating');
   }
 }

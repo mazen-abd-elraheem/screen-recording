@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=3.3">
+  <link rel="stylesheet" href="/static/style.css?v=3.4">
 </head>
 <body class="saas-theme">
   <!-- Top Executive Navigation Bar -->
@@ -484,7 +484,7 @@
       <div class="modal-body">
         <!-- Spoken Audio Player Toolbar -->
         <div class="tutorial-audio-bar">
-          <audio id="tutorialAudioPlayer"></audio>
+          <audio id="tutorialAudioPlayer" preload="auto"></audio>
           <button type="button" class="btn-play-pause" id="btnTutorialPlay" onclick="togglePlayTutorialAudio()">
             <span id="tutorialPlayIcon">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
@@ -492,6 +492,12 @@
               </svg>
             </span>
             <span id="tutorialPlayLabel">Play Voice Tutorial</span>
+          </button>
+          <button type="button" class="btn-stop-audio" id="btnTutorialStop" onclick="stopTutorialAudio()" title="Stop Audio">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+              <rect x="5" y="5" width="14" height="14" rx="2"></rect>
+            </svg>
+            <span>Stop</span>
           </button>
           <button type="button" class="btn-replay" id="btnTutorialReplay" onclick="replayTutorialAudio()" title="Replay">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
@@ -602,10 +608,32 @@
 
       <!-- Chat Input Area -->
       <div class="chat-footer">
+        <!-- Live Voice Recording Banner -->
+        <div class="chat-recording-banner" id="chatRecordingBanner" style="display: none;">
+          <div class="chat-rec-left">
+            <span class="red-pulse-dot"></span>
+            <span class="chat-rec-label" id="chatRecStatusText">Recording Voice...</span>
+            <span class="chat-rec-timer" id="chatRecTimer">00:00</span>
+          </div>
+          <div class="chat-rec-soundwave">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div class="chat-rec-actions">
+            <button type="button" class="btn-chat-rec-cancel" onclick="cancelChatVoiceRecording()" title="Cancel Recording">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              <span>Cancel</span>
+            </button>
+            <button type="button" class="btn-chat-rec-done" onclick="stopChatVoiceRecordingAndSend()" title="Finish & Transcribe">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Done</span>
+            </button>
+          </div>
+        </div>
+
         <div class="chat-input-wrapper">
           <textarea id="chatInputText" class="chat-textarea" rows="1" placeholder="Ask about candidates or interview questions..." onkeydown="handleChatKeyDown(event)"></textarea>
           <div class="chat-input-actions">
-            <button type="button" class="btn-chat-mic" id="btnChatMic" onclick="dictateChatMessage()" title="Dictate Message">
+            <button type="button" class="btn-chat-mic" id="btnChatMic" onclick="toggleChatVoiceRecording()" title="Record Voice Message (تسجيل صوتي)">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
                 <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
@@ -625,6 +653,6 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=3.3"></script>
+  <script src="/static/app.js?v=3.4"></script>
 </body>
 </html>
